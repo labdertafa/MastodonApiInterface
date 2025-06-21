@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
  * @author Rafael
  * @version 1.1
  * @created 25/07/2024
- * @updated 05/06/2025
+ * @updated 21/06/2025
  */
 public class MastodonNotificationApiTest {
     private String accessToken;
@@ -81,7 +81,7 @@ public class MastodonNotificationApiTest {
     
     @Test
     public void getNotificationsWithSinceId() throws Exception {
-        String sinceId = "312961068";
+        String sinceId = "31536449";
 
         MastodonNotificationListResponse notificationListResponse = this.notificationApi.getAllNotifications(0, 0, sinceId);
 

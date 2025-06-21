@@ -8,6 +8,7 @@ import com.laboratorio.mastodonapiinterface.MastodonNotificationApi;
 import com.laboratorio.mastodonapiinterface.exception.MastondonApiException;
 import com.laboratorio.mastodonapiinterface.model.MastodonNotification;
 import com.laboratorio.mastodonapiinterface.model.response.MastodonNotificationListResponse;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,7 +16,7 @@ import java.util.List;
  * @author Rafael
  * @version 1.3
  * @created 25/07/2024
- * @updated 05/06/2025
+ * @updated 21/06/2025
  */
 public class MastodonNotificationApiImpl extends MastodonBaseApi implements MastodonNotificationApi {
     public MastodonNotificationApiImpl(String urlBase, String accessToken) {
@@ -54,8 +55,16 @@ public class MastodonNotificationApiImpl extends MastodonBaseApi implements Mast
                 log.debug("Se ejecutó la query: " + uri);
                 log.debug("Resultados encontrados: " + notifications.size());
 
-                List<String> linkHeaderList = response.getHttpHeaders().get("Link");
-                if ((linkHeaderList != null) && (!linkHeaderList.isEmpty())) {
+                List<String> linkHeaderList = new ArrayList<>();
+                List<String> tempLinkHeaderList = response.getHttpHeaders().get("link");
+                if (tempLinkHeaderList != null) {
+                    linkHeaderList.addAll(tempLinkHeaderList);
+                }
+                tempLinkHeaderList = response.getHttpHeaders().get("Link");
+                if (tempLinkHeaderList != null) {
+                    linkHeaderList.addAll(tempLinkHeaderList);
+                }
+                if (!linkHeaderList.isEmpty()) {
                     String linkHeader = linkHeaderList.get(0);
                     log.debug("Recibí este Link: " + linkHeader);
                     minId = this.extractMinId(linkHeader);
