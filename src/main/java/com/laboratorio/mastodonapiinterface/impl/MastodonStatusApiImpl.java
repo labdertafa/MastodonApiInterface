@@ -20,11 +20,16 @@ import java.util.regex.Pattern;
 /**
  *
  * @author Rafael
- * @version 1.5
+ * @version 1.6
  * @created 24/07/2024
- * @updated 21/06/2025
+ * @updated 13/12/2025
  */
 public class MastodonStatusApiImpl extends MastodonBaseApi implements MastodonStatusApi {
+    private static final String AUTHORIZATION = "Authorization";
+    private static final String BEARER = "Bearer ";
+    private static final String CONTENT_TYPE = "Content-Type";
+    private static final String APPLICATION_JSON = "application/json";
+    
     public MastodonStatusApiImpl(String urlBase, String accessToken) {
         super(urlBase, accessToken);
     }
@@ -60,8 +65,8 @@ public class MastodonStatusApiImpl extends MastodonBaseApi implements MastodonSt
         try {
             String uri = this.urlBase + endpoint + "/" + id;
             ApiRequest request = new ApiRequest(uri, okStatus, ApiMethodType.DELETE);
-            request.addApiHeader("Content-Type", "application/json");
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
+            request.addApiHeader(CONTENT_TYPE, APPLICATION_JSON);
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
             
             ApiResponse response = this.client.executeApiRequest(request);
             log.debug("Response deleteStatus: {}", response.getResponseStr());
@@ -87,8 +92,8 @@ public class MastodonStatusApiImpl extends MastodonBaseApi implements MastodonSt
                 request.addApiPathParam("media_ids[]", mediaAttachment.getId());
             }
             
-            request.addApiHeader("Content-Type", "application/json");
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
+            request.addApiHeader(CONTENT_TYPE, APPLICATION_JSON);
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
             
             ApiResponse response = this.client.executeApiRequest(request);
             log.debug("Response postStatusWithImage: {}", response.getResponseStr());
@@ -118,7 +123,7 @@ public class MastodonStatusApiImpl extends MastodonBaseApi implements MastodonSt
             String uri = this.urlBase + endpoint;
             
             ApiRequest request = new ApiRequest(uri, okStatus, ApiMethodType.POST);
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
             request.addFileFormData("file", filePath);
                         
             ApiResponse response = this.client.executeApiRequest(request);
@@ -186,8 +191,8 @@ public class MastodonStatusApiImpl extends MastodonBaseApi implements MastodonSt
         try {
             ApiRequest request = new ApiRequest(uri, okStatus, ApiMethodType.POST);
             
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
-            request.addApiHeader("Content-Type", "application/json");
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
+            request.addApiHeader(CONTENT_TYPE, APPLICATION_JSON);
             
             ApiResponse response = this.client.executeApiRequest(request);
             log.debug("Response executeSimplePost: {}", response.getResponseStr());
@@ -256,8 +261,8 @@ public class MastodonStatusApiImpl extends MastodonBaseApi implements MastodonSt
                 request = new ApiRequest(nextPage, okStatus, ApiMethodType.GET);
             }
             request.addApiPathParam("limit", Integer.toString(limit));
-            request.addApiHeader("Content-Type", "application/json");
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
+            request.addApiHeader(CONTENT_TYPE, APPLICATION_JSON);
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
             
             ApiResponse response = this.client.executeApiRequest(request);
             
@@ -299,33 +304,28 @@ public class MastodonStatusApiImpl extends MastodonBaseApi implements MastodonSt
         List<MastodonStatus> statuses = null;
         boolean continuar = true;
         String nextPage = null;
-        
-        try {
-            String uri = this.urlBase + endpoint;
-            
-            do {
-                MastondonStatusListResponse statusListResponse = this.getTimelinePage(uri, okStatus, defaultLimit, nextPage);
-                log.debug("Elementos recuperados total: " + statusListResponse.getStatuses().size());
-                if (statuses == null) {
-                    statuses = statusListResponse.getStatuses();
-                } else {
-                    statuses.addAll(statusListResponse.getStatuses());
-                }
-                
-                nextPage = statusListResponse.getNextPage();
-                log.debug("getGlobalTimeline. Recuperados: " + statuses.size() + ". Next page: " + nextPage);
-                if (statusListResponse.getStatuses().isEmpty()) {
+        String uri = this.urlBase + endpoint;
+
+        do {
+            MastondonStatusListResponse statusListResponse = this.getTimelinePage(uri, okStatus, defaultLimit, nextPage);
+            log.debug("Elementos recuperados total: " + statusListResponse.getStatuses().size());
+            if (statuses == null) {
+                statuses = statusListResponse.getStatuses();
+            } else {
+                statuses.addAll(statusListResponse.getStatuses());
+            }
+
+            nextPage = statusListResponse.getNextPage();
+            log.debug("getGlobalTimeline. Recuperados: " + statuses.size() + ". Next page: " + nextPage);
+            if (statusListResponse.getStatuses().isEmpty()) {
+                continuar = false;
+            } else {
+                if ((nextPage == null) || (statuses.size() >= quantity)) {
                     continuar = false;
-                } else {
-                    if ((nextPage == null) || (statuses.size() >= quantity)) {
-                        continuar = false;
-                    }
                 }
-            } while (continuar);
-            
-            return statuses.subList(0, Math.min(quantity, statuses.size()));
-        } catch (Exception e) {
-            throw e;
-        }
+            }
+        } while (continuar);
+
+        return statuses.subList(0, Math.min(quantity, statuses.size()));
     }
 }

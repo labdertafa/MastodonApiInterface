@@ -14,9 +14,9 @@ import java.util.List;
 /**
  *
  * @author Rafael
- * @version 1.3
+ * @version 1.4
  * @created 25/07/2024
- * @updated 21/06/2025
+ * @updated 13/12/2025
  */
 public class MastodonNotificationApiImpl extends MastodonBaseApi implements MastodonNotificationApi {
     public MastodonNotificationApiImpl(String urlBase, String accessToken) {
@@ -72,11 +72,30 @@ public class MastodonNotificationApiImpl extends MastodonBaseApi implements Mast
                 }
             }
 
-            // return accounts;
             return new MastodonNotificationListResponse(minId, notifications);
         } catch (Exception e) {
             throw new MastondonApiException("Error recuperando una página de notificaciones en Mastodon", e);
         }
+    }
+    
+    private boolean isContinuar(MastodonNotificationListResponse notificationListResponse, int quantity,
+            List<MastodonNotification> notifications, int usedLimit, String minId) {
+        log.debug("getFollowers. Cantidad: " + quantity + ". Recuperados: " + notifications.size() + ". Min_id: " + minId);
+        if (notificationListResponse.getNotifications().isEmpty()) {
+            return false;
+        } else {
+            if (quantity > 0) {
+                if (notifications.size() >= quantity) {
+                    return false;
+                }
+            } else {
+                if (notificationListResponse.getNotifications().size() < usedLimit) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
     }
 
     @Override
@@ -90,10 +109,10 @@ public class MastodonNotificationApiImpl extends MastodonBaseApi implements Mast
             usedLimit = defaultLimit;
         }
         List<MastodonNotification> notifications = null;
-        boolean continuar = true;
-        String min_id = "0";
+        boolean continuar;
+        String minId = "0";
         if (posicionInicial != null) {
-            min_id = posicionInicial;
+            minId = posicionInicial;
         }
         
         if (quantity > 0) {
@@ -102,39 +121,22 @@ public class MastodonNotificationApiImpl extends MastodonBaseApi implements Mast
         
         String uri = this.urlBase + endpoint;
         
-        try {
-            do {
-                MastodonNotificationListResponse notificationListResponse = this.getNotificationPage(uri, usedLimit, okStatus, min_id);
-                if (notifications == null) {
-                    notifications = notificationListResponse.getNotifications();
-                } else {
-                    notifications.addAll(notificationListResponse.getNotifications());
-                }
-                
-                min_id = notificationListResponse.getMinId();
-                log.debug("getFollowers. Cantidad: " + quantity + ". Recuperados: " + notifications.size() + ". Min_id: " + min_id);
-                if (notificationListResponse.getNotifications().isEmpty()) {
-                    continuar = false;
-                } else {
-                    if (quantity > 0) {
-                        if (notifications.size() >= quantity) {
-                            continuar = false;
-                        }
-                    } else {
-                        if (notificationListResponse.getNotifications().size() < usedLimit) {
-                            continuar = false;
-                        }
-                    }
-                }
-            } while (continuar);
-
-            if (quantity == 0) {
-                return new MastodonNotificationListResponse(min_id, notifications);
+        do {
+            MastodonNotificationListResponse notificationListResponse = this.getNotificationPage(uri, usedLimit, okStatus, minId);
+            if (notifications == null) {
+                notifications = notificationListResponse.getNotifications();
+            } else {
+                notifications.addAll(notificationListResponse.getNotifications());
             }
-            
-            return new MastodonNotificationListResponse(min_id, notifications.subList(0, Math.min(quantity, notifications.size())));
-        } catch (Exception e) {
-            throw e;
+
+            minId = notificationListResponse.getMinId();
+            continuar = this.isContinuar(notificationListResponse, quantity, notifications, usedLimit, minId);
+        } while (continuar);
+
+        if (quantity == 0) {
+            return new MastodonNotificationListResponse(minId, notifications);
         }
+
+        return new MastodonNotificationListResponse(minId, notifications.subList(0, Math.min(quantity, notifications.size())));
     }
 }

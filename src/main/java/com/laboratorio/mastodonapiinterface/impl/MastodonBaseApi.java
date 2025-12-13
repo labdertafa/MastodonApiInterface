@@ -21,9 +21,9 @@ import org.apache.logging.log4j.Logger;
 /**
  *
  * @author Rafael
- * @version 1.3
+ * @version 1.4
  * @created 24/07/2024
- * @updated 21/06/2025
+ * @updated 13/12/2025
  */
 public class MastodonBaseApi {
     protected static final Logger log = LogManager.getLogger(MastodonBaseApi.class);
@@ -34,11 +34,20 @@ public class MastodonBaseApi {
     protected final Gson gson;
 
     public MastodonBaseApi(String urlBase, String accessToken) {
-        this.client = new ApiClient();
         this.urlBase = urlBase;
         this.accessToken = accessToken;
         this.apiConfig = new ReaderConfig("config//mastodon_api.properties");
         this.gson = new Gson();
+        String proxyHost = this.apiConfig.getProperty("mastodon_proxy_host");
+        String proxyPortStr = this.apiConfig.getProperty("mastodon_proxy_port");
+        String certificatePath = this.apiConfig.getProperty("mastodon_proxy_certificate");
+        if (proxyHost != null && !proxyHost.isBlank() && proxyPortStr != null && !proxyPortStr.isBlank()
+                && certificatePath != null && !certificatePath.isBlank()) {
+            int proxyPort = Integer.parseInt(proxyPortStr);
+            this.client = new ApiClient(proxyHost, proxyPort, certificatePath);
+        } else {
+            this.client = new ApiClient();
+        }
     }
     
     // Función que extrae el max_id de la respuesta
@@ -106,21 +115,36 @@ public class MastodonBaseApi {
                 }
             }
 
-            // return accounts;
             return new MastodonAccountListResponse(maxId, accounts);
         } catch (Exception e) {
             throw new MastondonApiException("Error recuperando una página de una cuenta en Mastodon. Uri: " + uri, e);
         }
     }
     
+    private boolean isContinuar(int quantity, List<MastodonAccount> accounts, String maxId,
+            MastodonAccountListResponse accountListResponse, int limit) {
+        log.debug("getMastodonAccountList. Cantidad: " + quantity + ". Recuperados: " + accounts.size() + ". Max_id: " + maxId);
+        if (quantity > 0) {
+            if ((accounts.size() >= quantity) || (maxId == null)) {
+                return false;
+            }
+        } else {
+            if ((maxId == null) || (accountListResponse.getAccounts().size() < limit)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+    
     protected MastodonAccountListResponse getMastodonAccountList(InstruccionInfo instruccionInfo, String userId, int quantity, String posicionInicial) throws Exception {
         List<MastodonAccount> accounts = null;
-        boolean continuar = true;
+        boolean continuar;
         String endpoint = instruccionInfo.getEndpoint();
         String complemento = instruccionInfo.getComplementoUrl();
         int limit = instruccionInfo.getLimit();
         int okStatus = instruccionInfo.getOkStatus();
-        String max_id = posicionInicial;
+        String maxId = posicionInicial;
         
         if (quantity > 0) {
             limit = Math.min(limit, quantity);
@@ -128,35 +152,22 @@ public class MastodonBaseApi {
         
         String uri = this.urlBase + endpoint + "/" + userId + "/" + complemento;
         
-        try {
-            do {
-                MastodonAccountListResponse accountListResponse = this.getAccountPage(uri, okStatus, limit, max_id);
-                if (accounts == null) {
-                    accounts = accountListResponse.getAccounts();
-                } else {
-                    accounts.addAll(accountListResponse.getAccounts());
-                }
-                
-                max_id = accountListResponse.getMaxId();
-                log.debug("getMastodonAccountList. Cantidad: " + quantity + ". Recuperados: " + accounts.size() + ". Max_id: " + max_id);
-                if (quantity > 0) {
-                    if ((accounts.size() >= quantity) || (max_id == null)) {
-                        continuar = false;
-                    }
-                } else {
-                    if ((max_id == null) || (accountListResponse.getAccounts().size() < limit)) {
-                        continuar = false;
-                    }
-                }
-            } while (continuar);
-
-            if (quantity == 0) {
-                return new MastodonAccountListResponse(max_id, accounts);
+        do {
+            MastodonAccountListResponse accountListResponse = this.getAccountPage(uri, okStatus, limit, maxId);
+            if (accounts == null) {
+                accounts = accountListResponse.getAccounts();
+            } else {
+                accounts.addAll(accountListResponse.getAccounts());
             }
-            
-            return new MastodonAccountListResponse(max_id, accounts.subList(0, Math.min(quantity, accounts.size())));
-        } catch (Exception e) {
-            throw e;
+
+            maxId = accountListResponse.getMaxId();
+            continuar = this.isContinuar(quantity, accounts, maxId, accountListResponse, limit);
+        } while (continuar);
+
+        if (quantity == 0) {
+            return new MastodonAccountListResponse(maxId, accounts);
         }
+
+        return new MastodonAccountListResponse(maxId, accounts.subList(0, Math.min(quantity, accounts.size())));
     }
 }

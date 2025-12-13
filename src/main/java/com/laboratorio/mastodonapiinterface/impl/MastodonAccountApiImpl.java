@@ -17,11 +17,16 @@ import java.util.stream.Collectors;
 /**
  *
  * @author Rafael
- * @version 1.5
+ * @version 1.6
  * @created 10/07/2024
- * @updated 05/06/2025
+ * @updated 13/12/2025
  */
 public class MastodonAccountApiImpl extends MastodonBaseApi implements MastodonAccountApi {
+    private static final String AUTHORIZATION = "Authorization";
+    private static final String BEARER = "Bearer ";
+    private static final String CONTENT_TYPE = "Content-Type";
+    private static final String APPLICATION_JSON = "application/json";
+    
     public MastodonAccountApiImpl(String urlBase, String accessToken) {
         super(urlBase, accessToken);
     }
@@ -158,8 +163,8 @@ public class MastodonAccountApiImpl extends MastodonBaseApi implements MastodonA
         try {
             String uri = this.urlBase + endpoint + "/" + id + "/" + complementoUrl;
             ApiRequest request = new ApiRequest(uri, okStatus, ApiMethodType.POST);
-            request.addApiHeader("Content-Type", "application/json");
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
+            request.addApiHeader(CONTENT_TYPE, APPLICATION_JSON);
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
             
             ApiResponse response = this.client.executeApiRequest(request);
             log.debug("Response followAccount: {}", response.getResponseStr());
@@ -180,8 +185,8 @@ public class MastodonAccountApiImpl extends MastodonBaseApi implements MastodonA
         try {
             String uri = this.urlBase + endpoint + "/" + id + "/" + complementoUrl;
             ApiRequest request = new ApiRequest(uri, okStatus, ApiMethodType.POST);
-            request.addApiHeader("Content-Type", "application/json");
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
+            request.addApiHeader(CONTENT_TYPE, APPLICATION_JSON);
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
             
             ApiResponse response = this.client.executeApiRequest(request);
             log.debug("Response unfollowAccount: {}", response.getResponseStr());
@@ -204,8 +209,8 @@ public class MastodonAccountApiImpl extends MastodonBaseApi implements MastodonA
             for (String id : ids) {
                 request.addApiPathParam("id[]", id);
             }
-            request.addApiHeader("Content-Type", "application/json");
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
+            request.addApiHeader(CONTENT_TYPE, APPLICATION_JSON);
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
             
             ApiResponse response = this.client.executeApiRequest(request);
             log.debug("Response checkrelationships: {}", response.getResponseStr());
@@ -237,7 +242,7 @@ public class MastodonAccountApiImpl extends MastodonBaseApi implements MastodonA
             ApiRequest request = new ApiRequest(uri, okStatus, ApiMethodType.GET);
             request.addApiPathParam("limit", Integer.toString(usedLimit));
          
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
             
             ApiResponse response = this.client.executeApiRequest(request);
             log.debug("Response getSuggestions: {}", response.getResponseStr());
@@ -259,8 +264,8 @@ public class MastodonAccountApiImpl extends MastodonBaseApi implements MastodonA
         try {
             String uri = this.urlBase + endpoint + "/" + userId;
             ApiRequest request = new ApiRequest(uri, okStatus, ApiMethodType.DELETE);
-            request.addApiHeader("Content-Type", "application/json");
-            request.addApiHeader("Authorization", "Bearer " + this.accessToken);
+            request.addApiHeader(CONTENT_TYPE, APPLICATION_JSON);
+            request.addApiHeader(AUTHORIZATION, BEARER + this.accessToken);
             
             this.client.executeApiRequest(request);
             
